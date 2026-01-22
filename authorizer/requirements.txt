@@ -1,0 +1,3 @@
+# Lambda Authorizer에 필요한 Python 라이브러리
+PyJWT
+cryptography # PyJWT가 일부 알고리즘에 필요로 하는 의존성

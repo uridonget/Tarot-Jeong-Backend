@@ -1,0 +1,13 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "tarot-backend-stack"
+resolve_s3 = true
+s3_prefix = "tarot-backend-stack"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "SupabaseJwtSecretParameterPath=\"/tarot/supabase/jwt_secret\" SupabaseDbConnStringParameterPath=\"/tarot/supabase/db_connection_string\""
+image_repositories = []
+
+[default.global.parameters]
+region = "ap-northeast-2"

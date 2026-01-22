@@ -1,34 +1,33 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Tarot-Jeong Backend
+  Tarot-Jeong Backend (Python)
 
-  This template deploys the API Gateway, Lambda Authorizer, and initial functions for the Tarot-Jeong backend.
+  This template deploys the API Gateway, Lambda Authorizer, and initial functions for the Tarot-Jeong backend using Python.
 
 Parameters:
   SupabaseJwtSecretParameterPath:
     Type: String
     Description: The path in AWS Parameter Store for the Supabase JWT Secret.
     Default: /tarot/supabase/jwt_secret
+  SupabaseDbConnStringParameterPath:
+    Type: String
+    Description: The path in AWS Parameter Store for the Supabase DB Connection String.
+    Default: /tarot/supabase/db_connection_string
 
 Globals:
   Function:
     Timeout: 10
     MemorySize: 128
-    Runtime: go1.x
+    Runtime: python3.12
     Architectures:
       - x86_64
-    Handler: bootstrap # Required for Go 1.x runtime
-    Environment:
-      Variables:
-        # Go 1.20 and later require this to be set for custom runtimes
-        GOMAXPROCS: "1"
 
 Resources:
   # ------------------------------------------------------------#
   # IAM Roles
   # ------------------------------------------------------------#
-  LambdaAuthorizerRole:
+  LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -48,37 +47,15 @@ Resources:
               - Effect: Allow
                 Action:
                   - ssm:GetParameter
-                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SupabaseJwtSecretParameterPath}"
-
-  # ------------------------------------------------------------#
-  # Lambda Functions
-  # ------------------------------------------------------------#
-  AuthorizerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./cmd/authorizer
-      Role: !GetAtt LambdaAuthorizerRole.Arn
-      Environment:
-        Variables:
-          JWT_SECRET_PARAM_PATH: !Ref SupabaseJwtSecretParameterPath
-
-  GetProfileFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./cmd/getProfile
-      Events:
-        GetProfileApi:
-          Type: Api
-          Properties:
-            Path: /profile
-            Method: get
-            Auth:
-              Authorizer: LambdaTokenAuthorizer
+                Resource: 
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SupabaseJwtSecretParameterPath}"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SupabaseDbConnStringParameterPath}"
 
   # ------------------------------------------------------------#
   # API Gateway
   # ------------------------------------------------------------#
-  ApiGateway:
+  # Define the API Gateway resource explicitly
+  MyApiGateway: # Renamed from ApiGateway to make it explicitly named
     Type: AWS::Serverless::Api
     Properties:
       StageName: v1
@@ -94,22 +71,56 @@ Resources:
               Headers:
                 - Authorization
               ReauthorizeEvery: 300 # Cache authorizer response for 5 minutes
-    Connectors:
-      DefaultApiGatewayApi:
-        Properties:
-          Stage: v1
-          # Override settings for the implicit API here
-          Auth:
-            DefaultAuthorizer: LambdaTokenAuthorizer
-            Authorizers:
-              LambdaTokenAuthorizer:
-                FunctionArn: !GetAtt AuthorizerFunction.Arn
-                Identity:
-                  Headers:
-                    - Authorization
-                  ReauthorizeEvery: 300 # Cache authorizer response for 5 minutes
+
+  # ------------------------------------------------------------#
+  # Lambda Functions
+  # ------------------------------------------------------------#
+  AuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./authorizer/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          JWT_SECRET_PARAM_PATH: !Ref SupabaseJwtSecretParameterPath
+
+  GetProfileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./get_profile/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+      Events:
+        GetProfileApi:
+          Type: Api
+          Properties:
+            Path: /profile
+            Method: get
+            RestApiId: !Ref MyApiGateway # Explicitly link to our *named* API Gateway
+            Auth:
+              Authorizer: LambdaTokenAuthorizer # Reference the authorizer defined in MyApiGateway
+
+  # GoogleLoginFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: ./google_login/
+  #     Handler: app.lambda_handler
+  #     Role: !GetAtt LambdaExecutionRole.Arn
+  #     Events:
+  #       GoogleLoginApi:
+  #         Type: Api
+  #         Properties:
+  #           Path: /users/login/google
+  #           Method: get
+  #           RestApiId: !Ref MyApiGateway
+  #           Auth:
+  #             Authorizer: NONE
 
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/v1"
+    Value: !Sub "https://${MyApiGateway}.execute-api.${AWS::Region}.amazonaws.com/v1"
