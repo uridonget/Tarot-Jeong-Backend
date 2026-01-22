@@ -14,6 +14,10 @@ Parameters:
     Type: String
     Description: The path in AWS Parameter Store for the Supabase DB Connection String.
     Default: /tarot/supabase/db_connection_string
+  GeminiApiKeyParameterPath:
+    Type: String
+    Description: The path in AWS Parameter Store for the Gemini API Key.
+    Default: /tarot/gemini/api_key
 
 Globals:
   Function:
@@ -50,6 +54,7 @@ Resources:
                 Resource: 
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SupabaseJwtSecretParameterPath}"
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SupabaseDbConnStringParameterPath}"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${GeminiApiKeyParameterPath}"
 
   # ------------------------------------------------------------#
   # API Gateway
@@ -104,21 +109,24 @@ Resources:
             Auth:
               Authorizer: LambdaTokenAuthorizer # Reference the authorizer defined in MyApiGateway
 
-  # GoogleLoginFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     CodeUri: ./google_login/
-  #     Handler: app.lambda_handler
-  #     Role: !GetAtt LambdaExecutionRole.Arn
-  #     Events:
-  #       GoogleLoginApi:
-  #         Type: Api
-  #         Properties:
-  #           Path: /users/login/google
-  #           Method: get
-  #           RestApiId: !Ref MyApiGateway
-  #           Auth:
-  #             Authorizer: NONE
+  GetTarotReadingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./get_tarot_reading/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          GEMINI_API_KEY_PARAM_PATH: !Ref GeminiApiKeyParameterPath
+      Events:
+        TarotReadingApi:
+          Type: Api
+          Properties:
+            Path: /tarot-reading
+            Method: post
+            RestApiId: !Ref MyApiGateway
+            Auth:
+              Authorizer: LambdaTokenAuthorizer
 
 Outputs:
   ApiUrl:

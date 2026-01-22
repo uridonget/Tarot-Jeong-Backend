@@ -53,18 +53,24 @@ def lambda_handler(event, context):
 
     # 리소스 ARN 생성
     try:
-        # HTTP API 페이로드 형식(v2.0)에 따라 리소스 ARN을 구성합니다.
-        region = context.invoked_function_arn.split(':')[3]
-        account_id = event['requestContext']['accountId']
-        api_id = event['requestContext']['apiId']
-        stage = event['requestContext']['stage']
-        # 이 스테이지의 모든 경로 및 메소드에 대한 접근을 제어하도록 와일드카드 사용
+        # REST API의 methodArn에서 스테이지까지만 추출하여 와일드카드 ARN 생성
+        method_arn = event.get("methodArn", "")
+        arn_parts = method_arn.split(":")
+        api_gateway_arn_parts = arn_parts[5].split("/")
+        
+        # arn:aws:execute-api:{region}:{account_id}:{api_id}/{stage}/*
+        region = arn_parts[3]
+        account_id = arn_parts[4]
+        api_id = api_gateway_arn_parts[0]
+        stage = api_gateway_arn_parts[1]
+        
         resource = f"arn:aws:execute-api:{region}:{account_id}:{api_id}/{stage}/*"
+        logger.info(f"와일드카드 리소스 ARN을 생성했습니다: {resource}")
+
     except (KeyError, AttributeError, IndexError):
-        # REST API 페이로드(v1.0) 또는 다른 형식의 이벤트를 위한 폴백(fallback)
-        # event.get을 사용하여 키가 없는 경우에도 에러가 발생하지 않도록 합니다.
-        resource = event.get("methodArn", "*")
-        logger.warning(f"HTTP API 컨텍스트를 찾을 수 없어 Resource ARN을 '{resource}'로 설정합니다.")
+        # ARN 파싱 실패 시, 들어온 methodArn을 그대로 사용하거나 전체 와일드카드로 대체
+        resource = event.get("methodArn", "*") 
+        logger.warning(f"methodArn 파싱에 실패하여 Resource ARN을 '{resource}'로 설정합니다.")
 
 
     # 대소문자를 구분하지 않고 Authorization 헤더를 찾습니다.
