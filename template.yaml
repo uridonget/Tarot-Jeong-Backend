@@ -115,6 +115,7 @@ Resources:
       CodeUri: ./get_tarot_reading/
       Handler: app.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30 # Increased timeout to 30 seconds
       Environment:
         Variables:
           GEMINI_API_KEY_PARAM_PATH: !Ref GeminiApiKeyParameterPath
@@ -128,7 +129,6 @@ Resources:
             RestApiId: !Ref MyApiGateway
             Auth:
               Authorizer: LambdaTokenAuthorizer
-
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
