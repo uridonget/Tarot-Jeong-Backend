@@ -118,6 +118,7 @@ Resources:
       Environment:
         Variables:
           GEMINI_API_KEY_PARAM_PATH: !Ref GeminiApiKeyParameterPath
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
       Events:
         TarotReadingApi:
           Type: Api
