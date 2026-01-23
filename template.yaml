@@ -129,6 +129,17 @@ Resources:
             RestApiId: !Ref MyApiGateway
             Auth:
               Authorizer: LambdaTokenAuthorizer
+
+  UpdateCreditsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./update_credits/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL"
