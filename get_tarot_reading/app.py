@@ -164,12 +164,12 @@ def lambda_handler(event, context):
         - Each section (past, present, future) must be at least 4-5 sentences for a rich reading experience.
 
         ### REQUIRED JSON FORMAT
-        {
+        {{
         "past": "상세한 과거 해석 내용...",
         "present": "상세한 현재 해석 내용...",
         "future": "상세한 미래 해석 및 조언...",
         "summary": "마음을 어루만지는 최종 요약..."
-        }
+        }}
         """
 
         try:
