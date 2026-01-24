@@ -67,7 +67,7 @@ Resources:
       Cors:
         AllowMethods: "'GET,POST,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
-        AllowOrigin: "'*'" # For production, restrict this to your frontend's domain
+        AllowOrigin: "'https://haechan.net'" # For production, restrict this to your frontend's domain
       Auth:
         Authorizers:
           LambdaTokenAuthorizer:
@@ -139,6 +139,42 @@ Resources:
       Environment:
         Variables:
           DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+
+  CreateShareFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: create_share/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /share
+            Method: post
+            RestApiId: !Ref MyApiGateway
+            Auth:
+              Authorizer: LambdaTokenAuthorizer
+
+  GetSharedReadingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_shared_reading/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /share/{share_id}
+            Method: get
+            RestApiId: !Ref MyApiGateway
 
 Outputs:
   ApiUrl:
