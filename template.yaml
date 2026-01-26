@@ -19,6 +19,11 @@ Parameters:
     Description: The path in AWS Parameter Store for the Gemini API Key.
     Default: /tarot/gemini/api_key
 
+  SqsQueueUrlParameterPath:
+    Type: String
+    Description: The path in AWS Parameter Store for the SQS Queue URL.
+    Default: /tarot/sqs_queue
+
 Globals:
   Function:
     Timeout: 10
@@ -55,6 +60,16 @@ Resources:
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SupabaseJwtSecretParameterPath}"
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SupabaseDbConnStringParameterPath}"
                   - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${GeminiApiKeyParameterPath}"
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SqsQueueUrlParameterPath}"
+        - PolicyName: SQSSendMessagePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                # For production, it's recommended to restrict this to the specific SQS Queue ARN
+                Resource: '*'
 
   # ------------------------------------------------------------#
   # API Gateway
@@ -67,7 +82,7 @@ Resources:
       Cors:
         AllowMethods: "'GET,POST,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
-        AllowOrigin: "'*'" # For production, restrict this to your frontend's domain
+        AllowOrigin: "'https://haechan.net'" # For production, restrict this to your frontend's domain
       Auth:
         Authorizers:
           LambdaTokenAuthorizer:
@@ -238,6 +253,7 @@ Resources:
       Environment:
         Variables:
           DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+          SQS_QUEUE_URL_PARAM_PATH: !Ref SqsQueueUrlParameterPath
       Events:
         ApiEvent:
           Type: Api

@@ -68,11 +68,13 @@ def lambda_handler(event, context):
                     c.content,
                     c.created_at,
                     c.user_id,
+                    c.is_deleted,
+                    c.is_purified,
                     u.nickname,
                     u.profile_image_url
                 FROM public.comments c
                 JOIN public.users u ON c.user_id = u.id
-                WHERE c.post_id = %s AND c.is_deleted = FALSE
+                WHERE c.post_id = %s
                 ORDER BY c.created_at ASC;
             """
             cursor.execute(fetch_query, (post_id,))
