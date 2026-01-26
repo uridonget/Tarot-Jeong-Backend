@@ -67,7 +67,7 @@ Resources:
       Cors:
         AllowMethods: "'GET,POST,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
-        AllowOrigin: "'https://haechan.net'" # For production, restrict this to your frontend's domain
+        AllowOrigin: "'*'" # For production, restrict this to your frontend's domain
       Auth:
         Authorizers:
           LambdaTokenAuthorizer:
@@ -75,7 +75,7 @@ Resources:
             Identity:
               Headers:
                 - Authorization
-              ReauthorizeEvery: 300 # Cache authorizer response for 5 minutes
+              ReauthorizeEvery: 300 # 5분 동안 authorizer 응답 캐시
 
   # ------------------------------------------------------------#
   # Lambda Functions
@@ -105,9 +105,9 @@ Resources:
           Properties:
             Path: /profile
             Method: get
-            RestApiId: !Ref MyApiGateway # Explicitly link to our *named* API Gateway
+            RestApiId: !Ref MyApiGateway
             Auth:
-              Authorizer: LambdaTokenAuthorizer # Reference the authorizer defined in MyApiGateway
+              Authorizer: LambdaTokenAuthorizer
 
   GetTarotReadingFunction:
     Type: AWS::Serverless::Function
@@ -115,7 +115,7 @@ Resources:
       CodeUri: ./get_tarot_reading/
       Handler: app.lambda_handler
       Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 30 # Increased timeout to 30 seconds
+      Timeout: 30
       Environment:
         Variables:
           GEMINI_API_KEY_PARAM_PATH: !Ref GeminiApiKeyParameterPath
@@ -158,6 +158,59 @@ Resources:
             RestApiId: !Ref MyApiGateway
             Auth:
               Authorizer: LambdaTokenAuthorizer
+
+  CreatePostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: create_post/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /posts
+            Method: post
+            RestApiId: !Ref MyApiGateway
+            Auth:
+              Authorizer: LambdaTokenAuthorizer
+
+  GetPostsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_posts/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /posts
+            Method: get
+            RestApiId: !Ref MyApiGateway
+
+  GetPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_post/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /posts/{post_id}
+            Method: get
+            RestApiId: !Ref MyApiGateway
 
   GetSharedReadingFunction:
     Type: AWS::Serverless::Function
