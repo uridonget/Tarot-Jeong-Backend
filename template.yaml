@@ -212,6 +212,42 @@ Resources:
             Method: get
             RestApiId: !Ref MyApiGateway
 
+  GetCommentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get_comments/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /posts/{post_id}/comments
+            Method: get
+            RestApiId: !Ref MyApiGateway
+
+  CreateCommentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: create_comment/
+      Handler: app.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          DB_CONN_STRING_PARAM_PATH: !Ref SupabaseDbConnStringParameterPath
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /posts/{post_id}/comments
+            Method: post
+            RestApiId: !Ref MyApiGateway
+            Auth:
+              Authorizer: LambdaTokenAuthorizer
+
   GetSharedReadingFunction:
     Type: AWS::Serverless::Function
     Properties:
